@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Career Path Reality Checker — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F6FA;
+    --surface:#FFFFFF;
+    --surface-2:#F1F4F9;
+    --line: rgba(15,27,45,0.10);
+    --path:#D98A20;
+    --growth:#1E9E8B;
+    --text:#1B2536;
+    --muted:#6B7787;
+    --danger:#C85A3A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(30,158,139,0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(217,138,32,0.06), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:900px;margin:0 auto;padding:28px 20px 60px;position:relative;}
+
+  /* Topographic trail background lines */
+  .contour{position:fixed;inset:0;z-index:0;opacity:0.35;pointer-events:none;}
+
+  header.top{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:20px;
+}
+
+.mode-toggle{
+    position:absolute;
+    top:10px;
+    right:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+@media(max-width:900px){
+
+.mode-toggle{
+    position:static;
+    margin-bottom:15px;
+    justify-content:center;
+}
+
+}
+  .mode-label{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.06em;}
+  .switch{width:38px;height:21px;border-radius:12px;background:#D9DEE6;
+    border:1px solid rgba(15,27,45,0.1);position:relative;transition:.2s;flex-shrink:0;}
+  .switch .knob{width:15px;height:15px;border-radius:50%;background:var(--muted);
+    position:absolute;top:2px;left:2px;transition:.2s;}
+  body.advanced .switch{background:rgba(63,184,166,0.25);border-color:var(--growth);}
+  body.advanced .switch .knob{transform:translateX(17px);background:var(--growth);}
+  .adv-only{display:none;}
+  body.advanced .adv-only{display:block;}
+  body.advanced .adv-only.metric{display:flex;flex-direction:column;}
+  body.advanced .adv-only.inline{display:inline-flex;}
+
+  header.top{position:relative;z-index:1;text-align:center;margin-bottom:26px;padding-top:6px;}
+  header.top .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--growth);margin-bottom:6px;
+  }
+  header.top h1{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:30px;margin:0;
+    letter-spacing:-0.01em;
+  }
+  header.top p{color:var(--muted);font-size:14px;margin:8px 0 0;}
+
+  /* Trail nav — signature element */
+  .trail{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;
+    margin:30px 0 34px;padding:0 6px;}
+  .trail::before{
+    content:"";position:absolute;top:15px;left:22px;right:22px;height:2px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px);
+    z-index:0;
+  }
+  .stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;
+    cursor:pointer;background:none;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;
+    font-size:10px;gap:8px;flex:1;}
+  .stop .dot{width:30px;height:30px;border-radius:50%;background:var(--surface);
+    border:2px solid var(--line);display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;color:var(--muted);
+    transition:all .25s ease;}
+  .stop.active .dot{border-color:var(--path);background:var(--path);color:#0F1B2D;
+    box-shadow:0 0 0 5px rgba(232,163,61,0.14);}
+  .stop.done .dot{border-color:var(--growth);color:var(--growth);}
+  .stop.active{color:var(--path);}
+  .stop span.label{max-width:70px;text-align:center;line-height:1.3;}
+
+  .screen{display:none;position:relative;z-index:1;animation:fade .35s ease;}
+  .screen.visible{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--surface);border:1px solid rgba(15,27,45,0.07);
+    border-radius:14px;padding:26px;margin-bottom:16px;
+    box-shadow:0 1px 2px rgba(15,27,45,0.04), 0 8px 24px rgba(15,27,45,0.05);}
+
+  h2.screen-title{font-family:'Space Grotesk',sans-serif;font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 20px;}
+
+  /* Screen 1: Welcome */
+  .btn-mic{background:var(--surface-2);border:1px solid rgba(15,27,45,0.1);color:var(--growth);
+    border-radius:9px;width:46px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:.2s;}
+  .btn-mic:hover{border-color:var(--growth);}
+  .btn-mic.listening{background:var(--growth);color:#0F1B2D;
+    animation:pulse 1.1s ease-in-out infinite;}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(63,184,166,0.45);}
+    50%{box-shadow:0 0 0 8px rgba(63,184,166,0);}
+  }
+  .chaco-tag{font-size:11.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;
+    margin:-10px 0 18px;}
+  .chaco-tag b{color:var(--growth);}
+  .search-row{display:flex;gap:10px;margin-bottom:10px;}
+  input[type=text]{flex:1;background:var(--surface-2);border:1px solid rgba(15,27,45,0.08);
+    border-radius:9px;padding:12px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;}
+  input[type=text]:focus{outline:2px solid var(--path);outline-offset:1px;}
+  .btn{border:none;border-radius:9px;padding:12px 18px;font-weight:600;font-size:13.5px;
+    cursor:pointer;font-family:'Inter',sans-serif;transition:transform .15s ease, filter .15s ease;}
+  .btn:focus-visible{outline:2px solid var(--path);outline-offset:2px;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--path);color:#12100A;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(15,27,45,0.14);}
+  .choice-row{display:flex;gap:12px;margin-bottom:22px;}
+  .choice-row .btn{flex:1;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{background:var(--surface-2);border:1px solid rgba(15,27,45,0.07);border-radius:20px;
+    padding:7px 14px;font-size:12.5px;color:var(--muted);cursor:pointer;transition:.15s;}
+  .chip:hover{color:var(--text);border-color:var(--path);}
+
+  /* Screen 2: Compare */
+  .compare-selectors{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .compare-selectors select{background:var(--surface-2);border:1px solid rgba(15,27,45,0.08);
+    border-radius:9px;padding:10px 12px;color:var(--text);font-size:13.5px;font-family:'Inter',sans-serif;
+    font-weight:600;}
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+  .degree-col{background:var(--surface-2);border-radius:10px;padding:16px;}
+  .degree-col h3{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 12px;color:var(--path);}
+  .degree-col.right h3{color:var(--growth);}
+  .company-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .company-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+    border:1px solid rgba(15,27,45,0.08);border-radius:20px;padding:4px 10px 4px 4px;
+    font-size:12px;color:var(--text);text-decoration:none;transition:.15s;}
+  .company-chip:hover{border-color:var(--path);color:var(--path);}
+  .avatar{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg, var(--path), var(--growth));
+    color:#0F1B2D;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:9px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .metric{padding:9px 0;border-bottom:1px dashed rgba(15,27,45,0.08);}
+  .metric:last-child{border-bottom:none;}
+  .metric .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
+    font-family:'IBM Plex Mono',monospace;}
+  .metric .v{font-size:14px;font-weight:600;margin-top:2px;}
+  .stars{color:var(--path);letter-spacing:1px;}
+
+  /* Screen 3: Advisor form */
+  .field{margin-bottom:18px;}
+  .profile-row{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+  .profile-photo{width:52px;height:52px;border-radius:50%;background:var(--surface-2);
+    border:2px dashed rgba(15,27,45,0.15);display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;
+    transition:.2s;}
+  .profile-photo.set{border-style:solid;border-color:var(--growth);color:var(--growth);
+    background:rgba(63,184,166,0.1);}
+  .field label{display:block;font-size:11.5px;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;}
+  .interest-list{display:flex;flex-direction:column;gap:9px;}
+  .interest{display:flex;align-items:center;gap:10px;background:var(--surface-2);
+    border-radius:9px;padding:11px 14px;cursor:pointer;border:1px solid transparent;transition:.15s;}
+  .interest.checked{border-color:var(--growth);}
+  .checkbox{width:18px;height:18px;border-radius:5px;border:2px solid var(--muted);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s;}
+  .interest.checked .checkbox{background:var(--growth);border-color:var(--growth);color:#0F1B2D;}
+  select{width:100%;background:var(--surface-2);border:1px solid rgba(15,27,45,0.08);
+    border-radius:9px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;}
+
+  /* Screen 4: Recommendation */
+  .rec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .rec-degree{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--path);}
+  .match-wrap{margin:16px 0 22px;}
+  .match-label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;margin-bottom:6px;}
+  .bar-track{height:10px;background:var(--surface-2);border-radius:6px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg, var(--growth), var(--path));width:0%;
+    border-radius:6px;transition:width 1s cubic-bezier(.2,.8,.2,1);}
+  .why-list{list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:8px;}
+  .why-list li{font-size:13.5px;display:flex;gap:8px;align-items:flex-start;}
+  .why-list li::before{content:"✓";color:var(--growth);font-weight:700;}
+  .skill-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;}
+  .tag{background:rgba(63,184,166,0.12);color:var(--growth);border:1px solid rgba(63,184,166,0.3);
+    border-radius:7px;padding:5px 11px;font-size:12px;font-family:'IBM Plex Mono',monospace;}
+
+  /* Screen 5: Dashboard */
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .dash-card{background:var(--surface-2);border-radius:10px;padding:16px;}
+  .dash-card h4{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;margin:0 0 12px;}
+  .demand-bar{height:8px;border-radius:5px;background:rgba(15,27,45,0.06);overflow:hidden;margin-bottom:4px;}
+  .demand-bar i{display:block;height:100%;background:var(--path);}
+  .city-list{list-style:none;padding:0;margin:0;font-size:13.5px;display:flex;flex-direction:column;gap:8px;}
+  .city-list li{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+  .city-list li b{color:var(--growth);font-family:'IBM Plex Mono',monospace;font-size:11px;min-width:26px;}
+  .muted-num{color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace;margin-left:auto;}
+  .full{grid-column:1/-1;}
+  svg.trend{width:100%;height:80px;display:block;}
+
+  /* Screen 6: Roadmap */
+  .roadmap{display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0 4px;}
+  .rm-node{background:var(--surface-2);border:1px solid rgba(15,27,45,0.08);border-radius:10px;
+    padding:12px 20px;font-size:13.5px;font-weight:600;min-width:200px;text-align:center;}
+  .rm-node.final{background:var(--path);color:#12100A;}
+  .rm-arrow{color:var(--muted);font-size:18px;margin:4px 0;}
+
+  .nav-row{display:flex;justify-content:space-between;margin-top:6px;position:relative;z-index:1;}
+  footer{text-align:center;color:var(--muted);font-size:11.5px;margin-top:34px;position:relative;z-index:1;
+    font-family:'IBM Plex Mono',monospace;}
+</style>
+</head>
+<body>
+<svg class="contour" viewBox="0 0 900 700" preserveAspectRatio="none">
+  <path d="M-20,120 Q200,60 400,140 T900,100" stroke="#3FB8A6" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M-20,180 Q220,110 420,200 T920,160" stroke="#3FB8A6" stroke-width="1" fill="none" opacity="0.3"/>
+  <path d="M-20,620 Q250,560 450,630 T950,580" stroke="#E8A33D" stroke-width="1" fill="none" opacity="0.4"/>
+  <path d="M-20,670 Q260,610 460,675 T960,630" stroke="#E8A33D" stroke-width="1" fill="none" opacity="0.25"/>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="mode-toggle" id="modeToggle" onclick="toggleAdvanced()">
+      <span class="mode-label">Advanced Mode</span>
+      <div class="switch" id="switchEl"><div class="knob"></div></div>
+    </div>
+    <div class="eyebrow">Career Path · Reality Checker</div>
+    <h1>Choose your future, backed by real data</h1>
+    <p>Search a degree, compare outcomes, and get a route mapped to the job market — not just a brochure. Voice powered by <b style="color:var(--growth);">Chaco</b>.</p>
+  </header>
+
+  <nav class="trail" id="trail"></nav>
+
+  <!-- Screen 1 -->
+  <section class="screen" data-screen="0">
+    <div class="card">
+      <h2 class="screen-title">Where do you want to start?</h2>
+      <p class="sub">Every recommendation here is checked against current hiring data, not marketing copy.</p>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Search a degree — e.g. Computer Science" value="AI & Data Science">
+        <button class="btn-mic" id="micBtn" onclick="toggleListen()" aria-label="Ask Chaco with your voice" title="Ask Chaco">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 14a3 3 0 003-3V6a3 3 0 10-6 0v5a3 3 0 003 3z" stroke="currentColor" stroke-width="2"/><path d="M19 11a7 7 0 01-14 0M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn btn-primary" onclick="startSearch()">Search</button>
+      </div>
+      <div class="chaco-tag" id="chacoTag">🎙 Ask <b>Chaco</b> — say a degree name instead of typing</div>
+      <div class="choice-row">
+        <button class="btn btn-ghost" onclick="go(1)">⚖ Compare Degrees</button>
+        <button class="btn btn-ghost" onclick="go(2)">🧭 AI Career Advisor</button>
+      </div>
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:10px;">Popular degrees</label>
+      <div class="chips">
+        <span class="chip" onclick="pickChip('Computer Science')">CSE</span><span class="chip" onclick="pickChip('AI &amp; Data Science')">AI &amp; DS</span><span class="chip" onclick="pickChip('Electronics &amp; Comm.')">ECE</span>
+        <span class="chip" onclick="pickChip('Mechanical Eng.')">Mechanical</span><span class="chip" onclick="pickChip('Civil Eng.')">Civil</span><span class="chip" onclick="pickChip('MBA')">MBA</span><span class="chip" onclick="pickChip('Actuarial Science')">ACTS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 2 -->
+  <section class="screen" data-screen="1">
+    <div class="card">
+      <h2 class="screen-title">Compare degree programs</h2>
+      <p class="sub">Same metrics, side by side — no rounding in favour of either. Pick any two.</p>
+      <div class="compare-selectors">
+        <select id="degSelA" onchange="renderCompare()"></select>
+        <select id="degSelB" onchange="renderCompare()"></select>
+      </div>
+      <div class="compare-grid">
+        <div class="degree-col" id="colA"></div>
+        <div class="degree-col right" id="colB"></div>
+      </div>
+      <button class="btn btn-primary" onclick="chooseFromCompare()" style="width:100%;">Get AI Recommendation →</button>
+    </div>
+  </section>
+
+  <!-- Screen 3 -->
+  <section class="screen" data-screen="2">
+    <div class="card">
+      <h2 class="screen-title">Tell us what drives you</h2>
+      <p class="sub" id="advisorSub">A short profile is enough to point the model in the right direction.</p>
+      <div class="field">
+        <label>Course / Degree group</label>
+        <select id="advisorCourse" onchange="onAdvisorCourseChange()"></select>
+      </div>
+      <div class="chaco-tag" id="advisorTag">🧭 Personalizing for <b>AI &amp; Data Science</b></div>
+      <div class="profile-row">
+        <div class="profile-photo" id="profilePhoto">YOU</div>
+        <button class="btn btn-ghost" onclick="addPhoto()">📷 Add photo</button>
+      </div>
+      <div class="field">
+        <label>Interests</label>
+        <div class="interest-list" id="advisorInterests">
+          <div class="interest checked" onclick="this.classList.toggle('checked')"><div class="checkbox">✓</div> Coding</div>
+          <div class="interest checked" onclick="this.classList.toggle('checked')"><div class="checkbox">✓</div> Artificial Intelligence</div>
+          <div class="interest checked" onclick="this.classList.toggle('checked')"><div class="checkbox">✓</div> Mathematics</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Preferred location</label>
+        <select><option>Chennai</option><option>Bengaluru</option><option>Hyderabad</option></select>
+      </div>
+      <div class="field">
+        <label>Career goal</label>
+        <select id="advisorGoal"><option>AI Engineer</option><option>Data Scientist</option><option>Software Engineer</option></select>
+      </div>
+      <button class="btn btn-primary" onclick="go(3.5)" style="width:100%;">Generate Recommendation</button>
+    </div>
+  </section>
+
+  <!-- Screen 4 -->
+  <section class="screen" data-screen="3">
+    <div class="card">
+      <h2 class="screen-title">Your recommended path</h2>
+      <p class="sub">Ranked against your interests, location, and current hiring signals.</p>
+      <div class="rec-head">
+        <div class="rec-degree" id="recDegree">B.Tech — Artificial Intelligence &amp; Data Science</div>
+      </div>
+      <div class="match-wrap">
+        <div class="match-label"><span>MATCH SCORE</span><span id="matchPct">92%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="matchBar"></div></div>
+      </div>
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:10px;">Why this path</label>
+      <ul class="why-list" id="whyList">
+        <li>High job demand across current listings</li>
+        <li>Strong salary trajectory over 5 years</li>
+        <li>Matches your stated interests closely</li>
+        <li>Above-average future growth outlook</li>
+      </ul>
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:10px;">Suggested skills</label>
+      <div class="skill-tags" id="recSkillTags">
+        <span class="tag">Python</span><span class="tag">Machine Learning</span>
+        <span class="tag">SQL</span><span class="tag">React</span>
+      </div>
+      <div class="adv-only" style="margin-bottom:20px;">
+        <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:10px;">Companies actively hiring this profile</label>
+        <div class="company-row" id="recCompanyRow">
+          <a class="company-chip" href="https://careers.google.com" target="_blank" rel="noopener"><span class="avatar">G</span>Google</a>
+          <a class="company-chip" href="https://www.tcs.com/careers" target="_blank" rel="noopener"><span class="avatar">TC</span>TCS</a>
+          <a class="company-chip" href="https://www.freshworks.com/company/careers/" target="_blank" rel="noopener"><span class="avatar">FW</span>Freshworks</a>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="go(4)" style="width:100%;">View Career Roadmap →</button>
+    </div>
+  </section>
+
+  <!-- Screen 5 -->
+  <section class="screen" data-screen="4">
+    <div class="card">
+      <h2 class="screen-title">Career dashboard</h2>
+      <p class="sub" id="dashSub">The market context behind the recommendation.</p>
+      <div class="dash-grid">
+        <div class="dash-card">
+          <h4>Job demand</h4>
+          <div class="demand-bar"><i id="dashDemandBar" style="width:88%"></i></div>
+          <div style="font-size:12px;color:var(--muted);" id="dashDemandText">88 / 100 current openings index</div>
+        </div>
+        <div class="dash-card">
+          <h4>Salary trend, 6yr</h4>
+          <svg class="trend" viewBox="0 0 200 70">
+            <polyline points="5,58 35,52 70,45 105,36 140,22 175,12 195,6" fill="none" stroke="#1E8C7D" stroke-width="2.5"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">
+            <span id="dashTrendLow">₹8L</span><span>2026</span><span id="dashTrendHigh">₹19L</span>
+          </div>
+        </div>
+        <div class="dash-card">
+          <h4>Top hiring cities</h4>
+          <ul class="city-list" id="dashCityList">
+            <li><b>01</b> Bengaluru <span class="muted-num">2,140 openings</span></li>
+            <li><b>02</b> Chennai <span class="muted-num">1,380 openings</span></li>
+            <li><b>03</b> Hyderabad <span class="muted-num">1,205 openings</span></li>
+            <li><b>04</b> Pune <span class="muted-num">960 openings</span></li>
+            <li><b>05</b> Gurugram <span class="muted-num">710 openings</span></li>
+            <li><b>06</b> Mumbai <span class="muted-num">640 openings</span></li>
+          </ul>
+        </div>
+        <div class="dash-card">
+          <h4>In-demand skills</h4>
+          <div class="skill-tags" id="dashSkillTags">
+            <span class="tag">Python</span><span class="tag">Machine Learning</span><span class="tag">SQL</span>
+            <span class="tag">Cloud (AWS/Azure)</span><span class="tag">React</span><span class="tag">Data Viz</span>
+            <span class="tag">MLOps</span><span class="tag">NLP</span>
+          </div>
+        </div>
+        <div class="dash-card">
+          <h4>Top recruiters hiring now</h4>
+          <div class="company-row" id="dashRecruiters">
+            <a class="company-chip" href="https://careers.google.com" target="_blank" rel="noopener"><span class="avatar">G</span>Google</a>
+            <a class="company-chip" href="https://www.tcs.com/careers" target="_blank" rel="noopener"><span class="avatar">TC</span>TCS</a>
+            <a class="company-chip" href="https://www.zoho.com/careers/" target="_blank" rel="noopener"><span class="avatar">Z</span>Zoho</a>
+            <a class="company-chip" href="https://www.infosys.com/careers.html" target="_blank" rel="noopener"><span class="avatar">IN</span>Infosys</a>
+            <a class="company-chip" href="https://www.flipkartcareers.com" target="_blank" rel="noopener"><span class="avatar">FK</span>Flipkart</a>
+            <a class="company-chip" href="https://www.freshworks.com/company/careers/" target="_blank" rel="noopener"><span class="avatar">FW</span>Freshworks</a>
+          </div>
+        </div>
+        <div class="dash-card adv-only">
+          <h4>Advanced: workforce insight</h4>
+          <div class="metric" style="border-bottom:1px dashed rgba(15,27,45,0.08);padding:0 0 8px;">
+            <div class="k">Women in workforce</div><div class="v" id="dashWomen">34%</div>
+          </div>
+          <div class="metric" style="border-bottom:1px dashed rgba(15,27,45,0.08);padding:8px 0;">
+            <div class="k">Avg. employer rating</div><div class="v" id="dashRating">4.1 / 5</div>
+          </div>
+          <div class="metric" style="padding-top:8px;">
+            <div class="k">Remote-friendly roles</div><div class="v" id="dashRemote" style="color:var(--growth);">42%</div>
+          </div>
+        </div>
+        <div class="dash-card">
+          <h4>Placement snapshot</h4>
+          <div class="metric" style="border-bottom:1px dashed rgba(15,27,45,0.08);padding:0 0 8px;">
+            <div class="k">Placement rate</div><div class="v" id="dashPlacementRate">91%</div>
+          </div>
+          <div class="metric" style="border-bottom:1px dashed rgba(15,27,45,0.08);padding:8px 0;">
+            <div class="k">Avg. time to offer</div><div class="v" id="dashTimeToOffer">3.4 months</div>
+          </div>
+          <div class="metric" style="padding-top:8px;">
+            <div class="k">3-yr salary CAGR</div><div class="v" id="dashCagr" style="color:var(--growth);">+14.2%</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="go(5)" style="width:100%;margin-top:14px;">See Full Roadmap →</button>
+    </div>
+  </section>
+
+  <!-- Screen 6 -->
+  <section class="screen" data-screen="5">
+    <div class="card">
+      <h2 class="screen-title" id="roadmapTitle">Your route to AI Engineer</h2>
+      <p class="sub">Six checkpoints, in order — the same order the market rewards.</p>
+      <div class="roadmap" id="roadmapNodes">
+        <div class="rm-node">B.Tech AI &amp; DS</div><div class="rm-arrow">↓</div>
+        <div class="rm-node">Learn Python</div><div class="rm-arrow">↓</div>
+        <div class="rm-node">Machine Learning</div><div class="rm-arrow">↓</div>
+        <div class="rm-node">Build Projects</div><div class="rm-arrow">↓</div>
+        <div class="rm-node">Internship</div><div class="rm-arrow">↓</div>
+        <div class="rm-node final">AI Engineer 🚀</div>
+      </div>
+      <button class="btn btn-ghost" onclick="go(0)" style="width:100%;margin-top:18px;">↺ Start over</button>
+    </div>
+  </section>
+
+  <footer>Career Path Reality Checker — clickable prototype</footer>
+</div>
+
+<script>
+const degrees = {
+  "AI & Data Science": {short:"AI & DS", starting:"₹8 LPA", mid:"₹18 LPA", stars:5, growth:"High",
+    skills:"Python, ML, Stats",
+    companies:[{n:"Google",u:"https://careers.google.com"},{n:"TCS",u:"https://www.tcs.com/careers"},{n:"Freshworks",u:"https://www.freshworks.com/company/careers/"}],
+    adv:{attrition:"11%", remote:"Yes", exp:"0–1 yr", rating:"4.3"},
+    role:"AI Engineer", roadmap:["B.Tech AI & DS","Learn Python","Machine Learning","Build Projects","Internship"],
+    demandIndex:94, women:34, remotePct:46, placementRate:91, timeToOffer:"3.4 months", cagr:"14.2",
+    interests:["Coding","Artificial Intelligence","Mathematics"],
+    goals:["AI Engineer","Data Scientist","ML Engineer"]},
+  "Computer Science": {short:"CSE", starting:"₹7 LPA", mid:"₹16 LPA", stars:4, growth:"Medium",
+    skills:"Java, SQL, DSA",
+    companies:[{n:"Zoho",u:"https://www.zoho.com/careers/"},{n:"Infosys",u:"https://www.infosys.com/careers.html"},{n:"Wipro",u:"https://careers.wipro.com"}],
+    adv:{attrition:"15%", remote:"Partial", exp:"0–1 yr", rating:"4.0"},
+    role:"Software Engineer", roadmap:["B.Tech CSE","Learn DSA","Web Development","Build Projects","Internship"],
+    demandIndex:88, women:31, remotePct:40, placementRate:89, timeToOffer:"3.6 months", cagr:"11.5",
+    interests:["Coding","Problem Solving","Web & Apps"],
+    goals:["Software Engineer","Full-Stack Developer","Systems Engineer"]},
+  "Electronics & Comm.": {short:"ECE", starting:"₹5.5 LPA", mid:"₹12 LPA", stars:3, growth:"Medium",
+    skills:"VLSI, Embedded C, IoT",
+    companies:[{n:"Qualcomm",u:"https://www.qualcomm.com/company/careers"},{n:"Bosch",u:"https://www.bosch.in/careers/"},{n:"Texas Instruments",u:"https://careers.ti.com"}],
+    adv:{attrition:"9%", remote:"No", exp:"0–2 yr", rating:"4.1"},
+    role:"Embedded Systems Engineer", roadmap:["B.Tech ECE","Embedded C","VLSI Basics","IoT Projects","Internship"],
+    demandIndex:74, women:24, remotePct:18, placementRate:82, timeToOffer:"4.1 months", cagr:"8.0",
+    interests:["Circuits & Hardware","Embedded Systems","Signal Processing"],
+    goals:["Embedded Systems Engineer","VLSI Design Engineer","IoT Engineer"]},
+  "Mechanical Eng.": {short:"Mech", starting:"₹4.8 LPA", mid:"₹10 LPA", stars:3, growth:"Low",
+    skills:"CAD, Thermodynamics, Robotics",
+    companies:[{n:"Ashok Leyland",u:"https://www.ashokleyland.com/en/careers"},{n:"L&T",u:"https://www.larsentoubro.com/corporate/careers/"},{n:"TVS",u:"https://www.tvsmotor.com/careers"}],
+    adv:{attrition:"13%", remote:"No", exp:"0–2 yr", rating:"3.9"},
+    role:"Design Engineer", roadmap:["B.Tech Mechanical","CAD & Design","Thermodynamics","Robotics Projects","Internship"],
+    demandIndex:68, women:12, remotePct:8, placementRate:78, timeToOffer:"4.8 months", cagr:"6.2",
+    interests:["Design & CAD","Machines & Robotics","Manufacturing"],
+    goals:["Design Engineer","Robotics Engineer","Production Engineer"]},
+  "Civil Eng.": {short:"Civil", starting:"₹4.2 LPA", mid:"₹9 LPA", stars:2, growth:"Low",
+    skills:"AutoCAD, Structural Design, GIS",
+    companies:[{n:"L&T Construction",u:"https://www.lntecc.com/careers/"},{n:"Shapoorji Pallonji",u:"https://www.shapoorji.in/careers"}],
+    adv:{attrition:"17%", remote:"No", exp:"0–2 yr", rating:"3.7"},
+    role:"Site Engineer", roadmap:["B.Tech Civil","AutoCAD","Structural Design","Site Projects","Internship"],
+    demandIndex:60, women:10, remotePct:5, placementRate:74, timeToOffer:"5.2 months", cagr:"5.0",
+    interests:["Structures & Design","Construction Planning","Geo & Environment"],
+    goals:["Site Engineer","Structural Engineer","Urban Planner"]},
+  "MBA": {short:"MBA", starting:"₹9 LPA", mid:"₹22 LPA", stars:4, growth:"High",
+    skills:"Strategy, Finance, Analytics",
+    companies:[{n:"Deloitte",u:"https://www2.deloitte.com/in/en/careers.html"},{n:"Accenture",u:"https://www.accenture.com/in-en/careers"},{n:"HUL",u:"https://www.hul.co.in/careers/"}],
+    adv:{attrition:"19%", remote:"Partial", exp:"0–3 yr", rating:"4.2"},
+    role:"Business Manager", roadmap:["MBA Admission","Business Fundamentals","Specialization Electives","Live Industry Project","Internship"],
+    demandIndex:82, women:42, remotePct:35, placementRate:85, timeToOffer:"3.9 months", cagr:"12.8",
+    interests:["Business Strategy","Finance","Leadership & Teams"],
+    goals:["Business Manager","Product Manager","Consultant"]},
+  "Actuarial Science": {short:"ACTS", starting:"₹6.5 LPA", mid:"₹20 LPA", stars:4, growth:"High",
+    skills:"Statistics, Probability, Excel/R",
+    companies:[{n:"WTW",u:"https://careers.wtwco.com"},{n:"Aon",u:"https://www.aon.com/careers"},{n:"Milliman",u:"https://www.milliman.com/en/careers"}],
+    adv:{attrition:"8%", remote:"Partial", exp:"0–2 yr", rating:"4.2"},
+    role:"Actuarial Analyst", roadmap:["B.Sc ACTS","Core Statistics","Actuarial Exams (CS/CM series)","Internship","Certification"],
+    demandIndex:70, women:38, remotePct:30, placementRate:80, timeToOffer:"4.0 months", cagr:"9.5",
+    interests:["Statistics & Probability","Risk Analysis","Finance"],
+    goals:["Actuarial Analyst","Risk Consultant","Insurance Data Analyst"]}
+};
+const baseCities = [
+  {name:"Bengaluru", openings:2140}, {name:"Chennai", openings:1380}, {name:"Hyderabad", openings:1205},
+  {name:"Pune", openings:960}, {name:"Gurugram", openings:710}, {name:"Mumbai", openings:640}
+];
+let selectedDegree = "AI & Data Science";
+function addPhoto(){
+  const el = document.getElementById('profilePhoto');
+  el.classList.add('set');
+  el.textContent = '✓';
+}
+function toggleAdvanced(){
+  document.body.classList.toggle('advanced');
+}
+function toggleListen(){
+  const btn = document.getElementById('micBtn');
+  const input = document.getElementById('searchInput');
+  const tag = document.getElementById('chacoTag');
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(btn.classList.contains('listening')) return; // already listening
+
+  btn.classList.add('listening');
+  tag.innerHTML = '🎙 Chaco is listening…';
+
+  if(SpeechRec){
+    const rec = new SpeechRec();
+    rec.lang = 'en-IN';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e)=>{
+      const said = e.results[0][0].transcript;
+      input.value = said;
+      finishListening(said);
+    };
+    rec.onerror = ()=> finishListening(null);
+    rec.onend = ()=>{ if(btn.classList.contains('listening')) finishListening(null); };
+    rec.start();
+  } else {
+    // Fallback demo when browser has no mic/speech support (e.g. sandboxed preview)
+    const sample = ["Artificial Intelligence and Data Science", "Mechanical Engineering", "MBA"];
+    const pick = sample[Math.floor(Math.random()*sample.length)];
+    setTimeout(()=>{
+      input.value = pick;
+      finishListening(pick);
+    }, 1400);
+  }
+}
+function finishListening(said){
+  const btn = document.getElementById('micBtn');
+  const tag = document.getElementById('chacoTag');
+  btn.classList.remove('listening');
+  tag.innerHTML = said
+    ? `🎙 Chaco heard: "<b>${said}</b>"`
+    : '🎙 Ask <b>Chaco</b> — say a degree name instead of typing';
+}
+
+function starStr(n){ return "★".repeat(n) + "☆".repeat(5-n); }
+function avatarRow(companies){
+  return `<div class="company-row">` + companies.map(c=>{
+    const initials = c.n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    return `<a class="company-chip" href="${c.u}" target="_blank" rel="noopener">
+      <span class="avatar">${initials}</span>${c.n}
+    </a>`;
+  }).join('') + `</div>`;
+}
+function degreeCard(name){
+  const d = degrees[name];
+  return `<h3>${name}</h3>
+    <div class="metric"><div class="k">Starting salary</div><div class="v">${d.starting}</div></div>
+    <div class="metric"><div class="k">Mid-career salary</div><div class="v">${d.mid}</div></div>
+    <div class="metric"><div class="k">Job demand</div><div class="v stars">${starStr(d.stars)}</div></div>
+    <div class="metric"><div class="k">Future growth</div><div class="v">${d.growth}</div></div>
+    <div class="metric"><div class="k">Top skills</div><div class="v">${d.skills}</div></div>
+    <div class="metric adv-only"><div class="k">Attrition rate</div><div class="v">${d.adv.attrition}</div></div>
+    <div class="metric adv-only"><div class="k">Remote-friendly</div><div class="v">${d.adv.remote}</div></div>
+    <div class="metric adv-only"><div class="k">Experience required</div><div class="v">${d.adv.exp}</div></div>
+    <div class="metric adv-only"><div class="k">Employer rating</div><div class="v">${d.adv.rating} / 5</div></div>
+    <div class="metric"><div class="k">Hiring companies</div>${avatarRow(d.companies)}</div>`;
+}
+function matchDegree(text){
+  if(!text) return selectedDegree;
+  const t = text.trim().toLowerCase();
+  const names = Object.keys(degrees);
+  for(const n of names){
+    if(t === n.toLowerCase() || t === degrees[n].short.toLowerCase()) return n;
+  }
+  for(const n of names){
+    if(n.toLowerCase().includes(t) || t.includes(n.toLowerCase()) ||
+       degrees[n].short.toLowerCase().includes(t) || t.includes(degrees[n].short.toLowerCase())) return n;
+  }
+  const kw = {
+    'ai':'AI & Data Science', 'artificial':'AI & Data Science', 'data science':'AI & Data Science',
+    'computer':'Computer Science', 'cse':'Computer Science', 'software':'Computer Science',
+    'electronic':'Electronics & Comm.', 'ece':'Electronics & Comm.', 'communication':'Electronics & Comm.',
+    'mechanical':'Mechanical Eng.', 'mech':'Mechanical Eng.',
+    'civil':'Civil Eng.',
+    'mba':'MBA', 'business':'MBA', 'management':'MBA',
+    'acts':'Actuarial Science', 'actuarial':'Actuarial Science', 'actuary':'Actuarial Science'
+  };
+  for(const key in kw){ if(t.includes(key)) return kw[key]; }
+  return selectedDegree;
+}
+function pickChip(name){
+  document.getElementById('searchInput').value = name;
+  startSearch();
+}
+function startSearch(){
+  selectedDegree = matchDegree(document.getElementById('searchInput').value);
+  document.getElementById('degSelA').value = selectedDegree;
+  renderCompare();
+  go(1);
+}
+function chooseFromCompare(){
+  selectedDegree = document.getElementById('degSelA').value;
+  go(3);
+}
+function initAdvisorSelector(){
+  const sel = document.getElementById('advisorCourse');
+  Object.keys(degrees).forEach(n=>{
+    sel.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+}
+function onAdvisorCourseChange(){
+  selectedDegree = document.getElementById('advisorCourse').value;
+  document.getElementById('degSelA').value = selectedDegree;
+  renderCompare();
+  renderAdvisor(selectedDegree);
+}
+function renderAdvisor(name){
+  const d = degrees[name];
+  document.getElementById('advisorCourse').value = name;
+  document.getElementById('advisorSub').textContent = `A short profile for ${name} points the model in the right direction.`;
+  document.getElementById('advisorTag').innerHTML = `🧭 Personalizing for <b>${name}</b>`;
+  document.getElementById('advisorInterests').innerHTML = d.interests.map(i=>
+    `<div class="interest checked" onclick="this.classList.toggle('checked')"><div class="checkbox">✓</div> ${i}</div>`
+  ).join('');
+  document.getElementById('advisorGoal').innerHTML = d.goals.map(g=>`<option>${g}</option>`).join('');
+}
+initAdvisorSelector();
+function renderRecommendation(name){
+  const d = degrees[name];
+  const matchPct = Math.min(97, 72 + d.stars * 5);
+  document.getElementById('recDegree').textContent = `${name} — Path to ${d.role}`;
+  document.getElementById('matchPct').textContent = matchPct + '%';
+  document.getElementById('whyList').innerHTML = `
+    <li>High job demand — ${d.demandIndex}/100 current openings index</li>
+    <li>Salary trajectory: ${d.starting} → ${d.mid} over a career</li>
+    <li>Matches your stated interests closely</li>
+    <li>${d.growth} future growth outlook</li>`;
+  document.getElementById('recSkillTags').innerHTML =
+    d.skills.split(',').map(s=>`<span class="tag">${s.trim()}</span>`).join('');
+  document.getElementById('recCompanyRow').innerHTML =
+    d.companies.map(c=>{
+      const initials = c.n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      return `<a class="company-chip" href="${c.u}" target="_blank" rel="noopener"><span class="avatar">${initials}</span>${c.n}</a>`;
+    }).join('');
+  return matchPct;
+}
+function renderDashboard(name){
+  const d = degrees[name];
+  document.getElementById('dashSub').textContent = `The market context behind the recommendation for ${name}.`;
+  document.getElementById('dashDemandBar').style.width = d.demandIndex + '%';
+  document.getElementById('dashDemandText').textContent = `${d.demandIndex} / 100 current openings index`;
+  document.getElementById('dashTrendLow').textContent = d.starting.replace(' LPA','L');
+  document.getElementById('dashTrendHigh').textContent = d.mid.replace(' LPA','L');
+  const ratio = d.demandIndex / 94;
+  document.getElementById('dashCityList').innerHTML = baseCities.map((c,i)=>
+    `<li><b>${String(i+1).padStart(2,'0')}</b> ${c.name} <span class="muted-num">${Math.max(80, Math.round(c.openings * ratio)).toLocaleString('en-IN')} openings</span></li>`
+  ).join('');
+  document.getElementById('dashSkillTags').innerHTML =
+    d.skills.split(',').map(s=>`<span class="tag">${s.trim()}</span>`).join('');
+  document.getElementById('dashRecruiters').innerHTML =
+    d.companies.map(c=>{
+      const initials = c.n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      return `<a class="company-chip" href="${c.u}" target="_blank" rel="noopener"><span class="avatar">${initials}</span>${c.n}</a>`;
+    }).join('');
+  document.getElementById('dashWomen').textContent = d.women + '%';
+  document.getElementById('dashRating').textContent = d.adv.rating + ' / 5';
+  document.getElementById('dashRemote').textContent = d.remotePct + '%';
+  document.getElementById('dashPlacementRate').textContent = d.placementRate + '%';
+  document.getElementById('dashTimeToOffer').textContent = d.timeToOffer;
+  document.getElementById('dashCagr').textContent = '+' + d.cagr + '%';
+}
+function renderRoadmap(name){
+  const d = degrees[name];
+  document.getElementById('roadmapTitle').textContent = `Your route to ${d.role}`;
+  const nodes = d.roadmap.map(step => `<div class="rm-node">${step}</div><div class="rm-arrow">↓</div>`).join('');
+  document.getElementById('roadmapNodes').innerHTML = nodes + `<div class="rm-node final">${d.role} 🚀</div>`;
+}
+function renderCompare(){
+  const a = document.getElementById('degSelA').value;
+  const b = document.getElementById('degSelB').value;
+  document.getElementById('colA').innerHTML = degreeCard(a);
+  document.getElementById('colB').innerHTML = degreeCard(b);
+}
+function initCompareSelectors(){
+  const names = Object.keys(degrees);
+  const selA = document.getElementById('degSelA');
+  const selB = document.getElementById('degSelB');
+  names.forEach(n=>{
+    selA.innerHTML += `<option value="${n}">${n}</option>`;
+    selB.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+  selA.value = "AI & Data Science";
+  selB.value = "Computer Science";
+  renderCompare();
+}
+initCompareSelectors();
+
+const stops = [
+  {label:"Search"}, {label:"Compare"}, {label:"Advisor"},
+  {label:"Recommend"}, {label:"Dashboard"}, {label:"Roadmap"}
+];
+const trail = document.getElementById('trail');
+stops.forEach((s,i)=>{
+  const b = document.createElement('button');
+  b.className = 'stop';
+  b.innerHTML = `<div class="dot">${i+1}</div><span class="label">${s.label}</span>`;
+  b.onclick = ()=>go(i);
+  b.dataset.i = i;
+  trail.appendChild(b);
+});
+
+let current = 0;
+function renderTrail(){
+  document.querySelectorAll('.stop').forEach((el,i)=>{
+    el.classList.toggle('active', i===Math.floor(current));
+    el.classList.toggle('done', i < Math.floor(current));
+  });
+}
+function go(target){
+  // 3.5 is the transition from advisor form -> recommendation (screen index 3)
+  current = target === 3.5 ? 3 : target;
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.toggle('visible', parseInt(s.dataset.screen) === current);
+  });
+  renderTrail();
+  if(current === 2){
+    renderAdvisor(selectedDegree);
+  }
+  if(current === 3){
+    const matchPct = renderRecommendation(selectedDegree);
+    const bar = document.getElementById('matchBar');
+    bar.style.width = '0%';
+    requestAnimationFrame(()=> requestAnimationFrame(()=> bar.style.width = matchPct + '%'));
+  }
+  if(current === 4){
+    renderDashboard(selectedDegree);
+  }
+  if(current === 5){
+    renderRoadmap(selectedDegree);
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+go(0);
+</script>
+</body>
+</html>
