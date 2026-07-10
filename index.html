@@ -2,7 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Career Path Reality Checker — Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chaco — Career Path Reality Checker | Find the right degree, backed by real hiring data</title>
+<meta name="description" content="Chaco helps students in India pick the right degree by checking it against real job-market data — hiring demand, salary trends, top cities, and companies actively hiring, not just brochure promises.">
+<meta name="keywords" content="Chaco, career path reality checker, degree comparison India, which course to choose, engineering vs MBA salary, job demand by degree, career advisor India, AI career advisor">
+<meta name="author" content="Chaco">
+<link rel="canonical" href="https://chaco.example.com/">
+
+<!-- Open Graph / social preview -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Chaco">
+<meta property="og:title" content="Chaco — Career Path Reality Checker">
+<meta property="og:description" content="Search a degree, compare outcomes, and get a route mapped to the job market — not just a brochure. Powered by Chaco.">
+<meta property="og:url" content="https://chaco.example.com/">
+<meta property="og:image" content="https://chaco.example.com/chaco-social-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Chaco — Career Path Reality Checker">
+<meta name="twitter:description" content="Search a degree, compare outcomes, and get a route mapped to the job market — not just a brochure.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231E9E8B'/%3E%3Cpath d='M28 62 Q40 30 50 30 Q60 30 72 62' stroke='%23F4F6FA' stroke-width='8' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='68' r='6' fill='%23D98A20'/%3E%3C/svg%3E">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Chaco",
+  "alternateName": "Career Path Reality Checker",
+  "url": "https://chaco.example.com/",
+  "description": "Chaco helps students pick the right degree by checking it against real job-market data — hiring demand, salary trends, top cities, and companies actively hiring.",
+  "applicationCategory": "EducationApplication",
+  "operatingSystem": "Any"
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -33,32 +65,8 @@
   /* Topographic trail background lines */
   .contour{position:fixed;inset:0;z-index:0;opacity:0.35;pointer-events:none;}
 
-  header.top{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding-top:20px;
-}
-
-.mode-toggle{
-    position:absolute;
-    top:10px;
-    right:0;
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-
-@media(max-width:900px){
-
-.mode-toggle{
-    position:static;
-    margin-bottom:15px;
-    justify-content:center;
-}
-
-}
+  .mode-toggle{position:absolute;top:28px;right:20px;display:flex;align-items:center;gap:9px;
+    cursor:pointer;user-select:none;}
   .mode-label{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);
     text-transform:uppercase;letter-spacing:.06em;}
   .switch{width:38px;height:21px;border-radius:12px;background:#D9DEE6;
@@ -73,6 +81,11 @@
   body.advanced .adv-only.inline{display:inline-flex;}
 
   header.top{position:relative;z-index:1;text-align:center;margin-bottom:26px;padding-top:6px;}
+  .logo-row{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:14px;}
+  .logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg, var(--growth), var(--path));
+    color:#0F1B2D;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center;}
+  .logo-word{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;letter-spacing:-0.01em;color:var(--text);}
   header.top .eyebrow{
     font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.14em;
     text-transform:uppercase;color:var(--growth);margin-bottom:6px;
@@ -248,9 +261,10 @@
       <span class="mode-label">Advanced Mode</span>
       <div class="switch" id="switchEl"><div class="knob"></div></div>
     </div>
+    <div class="logo-row"><span class="logo-mark">Ch</span><span class="logo-word">chaco</span></div>
     <div class="eyebrow">Career Path · Reality Checker</div>
     <h1>Choose your future, backed by real data</h1>
-    <p>Search a degree, compare outcomes, and get a route mapped to the job market — not just a brochure. Voice powered by <b style="color:var(--growth);">Chaco</b>.</p>
+    <p>Search a degree, compare outcomes, and get a route mapped to the job market — not just a brochure. Powered by <b style="color:var(--growth);">Chaco</b>.</p>
   </header>
 
   <nav class="trail" id="trail"></nav>
@@ -463,7 +477,7 @@
     </div>
   </section>
 
-  <footer>© 2026 Team Apex. All Rights Reserved.</footer>
+  <footer>Chaco — © 2026 Team Apex. All Rights Reserved.</footer>
 </div>
 
 <script>
